@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: assistia-api
+    runtime: python
+    plan: free
+    autoDeploy: true
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      # Limpa cache para reduzir tamanho
+      pip cache purge
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: HF_TOKEN
+        sync: false  # Você pode adicionar depois se precisar
