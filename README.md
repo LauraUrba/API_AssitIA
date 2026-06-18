@@ -180,30 +180,6 @@ assistIA_api_tcc/
 3. **Sem tecnologia digital**: A API NÃO recomenda apps, tablets ou tecnologia digital
 4. **CPU apenas**: O modelo roda em CPU, o que pode ser mais lento que GPU
 
-## 🔧 Solução de Problemas
-
-### Erro: O PyCharm fecha durante o carregamento do modelo
-
-**Causa**: Falta de memória RAM.
-
-**Solução**:
-1. Use o modelo Qwen2.5-0.5B (já configurado)
-2. Feche outros programas para liberar memória
-3. Se ainda assim falhar, tente o modelo SmolLM2-1.7B-Instruct (mais leve)
-
-### Erro: "Token indices sequence length is longer than specified maximum"
-
-**Causa**: O prompt é maior que o limite de contexto do modelo.
-
-**Solução**: O código já implementa truncamento automático com `truncation=True` e `max_length=2048`.
-
-### Erro: Não consigo baixar o modelo
-
-**Solução**:
-- Verifique sua conexão com a internet
-- Tente usar um modelo alternativo:
-  ```python
-  ID_MODELO = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
   ```
 ## 📚 Referências
 
