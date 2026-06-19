@@ -7,7 +7,7 @@ import re
 import os
 import warnings
 
-# 🔥 SUPRIME WARNINGS
+# SUPRIME WARNINGS
 warnings.filterwarnings("ignore", category=FutureWarning)
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 
@@ -21,9 +21,9 @@ app = FastAPI(
     version="2.0.0"
 )
 
-print("🚀 Carregando modelo TinyLlama-1.1B (GGUF)...")
+print("Carregando modelo TinyLlama-1.1B (GGUF)...")
 
-# 🔥 CAMINHO DO MODELO TINYLLAMA
+# CAMINHO DO MODELO TINYLLAMA
 MODEL_PATH = "./models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
 
 # Verifica se o arquivo existe
