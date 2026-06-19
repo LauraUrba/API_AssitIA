@@ -1,11 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, List
-from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
-import torch
+from llama_cpp import Llama
 import gc
 import re
 import os
+import warnings
+
+# 🔥 SUPRIME WARNINGS
+warnings.filterwarnings("ignore", category=FutureWarning)
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 
 # ============================================
 # CONFIGURAÇÃO INICIAL DA API
@@ -17,30 +21,36 @@ app = FastAPI(
     version="2.0.0"
 )
 
-print("🚀 Carregando modelo SmolLM2-135M (modo ultra-leve)...")
+print("🚀 Carregando modelo TinyLlama-1.1B (GGUF)...")
 
-ID_MODELO = "HuggingFaceTB/SmolLM2-135M-Instruct"
+# 🔥 CAMINHO DO MODELO TINYLLAMA
+MODEL_PATH = "./models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
 
-# 🔥 OTIMIZAÇÕES PARA REDUZIR MEMÓRIA
-os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
+# Verifica se o arquivo existe
+if not os.path.exists(MODEL_PATH):
+    print(f"❌ Arquivo não encontrado: {MODEL_PATH}")
+    exit(1)
 
-tokenizador = AutoTokenizer.from_pretrained(ID_MODELO)
+# 🔥 CARREGA O MODELO COM CONFIGURAÇÕES MÍNIMAS
+try:
+    llm = Llama(
+        model_path=MODEL_PATH,
+        n_ctx=512,           # Contexto reduzido
+        n_threads=1,         # Apenas 1 thread
+        n_gpu_layers=0,      # 0 = apenas CPU
+        verbose=False,
+        n_batch=128,
+        use_mmap=True,
+        use_mlock=False,
+    )
+    print("✅ Modelo TinyLlama-1.1B carregado com sucesso!")
+    modelo_ok = True
+except Exception as e:
+    print(f"❌ Erro ao carregar modelo: {e}")
+    modelo_ok = False
+    llm = None
 
-if tokenizador.pad_token is None:
-    tokenizador.pad_token = tokenizador.eos_token
-
-# 🔥 SEM QUANTIZAÇÃO - APENAS COM low_cpu_mem_usage
-modelo = AutoModelForCausalLM.from_pretrained(
-    ID_MODELO,
-    device_map="cpu",
-    torch_dtype=torch.float32,
-    low_cpu_mem_usage=True,
-    use_cache=False,  # Desativa cache para economizar memória
-)
-
-print("✅ Modelo SmolLM2-135M carregado com sucesso!")
-print(f"💻 Dispositivo em uso: {modelo.device}")
+print(f"💻 Modo: {'IA' if modelo_ok else 'Catálogo Fixo'}")
 
 # ============================================
 # CLASSES DE REQUISIÇÃO
@@ -230,6 +240,10 @@ def classificar_necessidades(solicitacao: SolicitacaoAnaliseTEA) -> Dict[str, st
 # ============================================
 
 async def gerar_resposta_async(prompt: str, max_tokens: int = 200) -> str:
+    """Gera resposta usando TinyLlama via llama-cpp-python"""
+    if not modelo_ok or llm is None:
+        return "Modelo indisponível. Use o catálogo de recursos."
+
     try:
         mensagens = [
             {"role": "system",
@@ -237,40 +251,19 @@ async def gerar_resposta_async(prompt: str, max_tokens: int = 200) -> str:
             {"role": "user", "content": prompt}
         ]
 
-        texto_formatado = tokenizador.apply_chat_template(
-            mensagens,
-            tokenize=False,
-            add_generation_prompt=True
-        )
-
-        entradas = tokenizador(
-            texto_formatado,
-            return_tensors="pt",
-            truncation=True,
-            max_length=512
-        ).to(modelo.device)
-
-        config_geracao = GenerationConfig(
-            max_new_tokens=max_tokens,
+        response = llm.create_chat_completion(
+            messages=mensagens,
+            max_tokens=max_tokens,
             temperature=0.3,
-            do_sample=True,
             top_p=0.9,
-            repetition_penalty=1.1,
-            pad_token_id=tokenizador.pad_token_id,
-            eos_token_id=tokenizador.eos_token_id,
+            repeat_penalty=1.1,
+            stream=False,
         )
 
-        with torch.no_grad():
-            saidas = modelo.generate(**entradas, generation_config=config_geracao)
+        resposta = response["choices"][0]["message"]["content"]
 
-        resposta = tokenizador.decode(
-            saidas[0][entradas['input_ids'].shape[1]:],
-            skip_special_tokens=True
-        )
-
-        del entradas, saidas
+        del response
         gc.collect()
-        torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
         return resposta.strip()
 
