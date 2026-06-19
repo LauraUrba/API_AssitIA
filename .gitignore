@@ -42,3 +42,5 @@ Thumbs.db
 # Hugging Face
 .cache/
 .cache/huggingface/
+models/*.gguf
+models/*.bin
