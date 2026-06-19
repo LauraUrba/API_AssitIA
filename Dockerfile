@@ -8,14 +8,17 @@ RUN apt-get update && \
     g++ \
     build-essential \
     cmake \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# 🔥 COPIA O MODELO PARA DENTRO DO CONTAINER
-COPY ./models /app/models
+# 🔥 CRIA A PASTA E BAIXA O MODELO DURANTE O BUILD
+RUN mkdir -p /app/models && \
+    wget -O /app/models/LFM2.5-350M-Q4_K_M.gguf \
+    https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf
 
 COPY . .
 
