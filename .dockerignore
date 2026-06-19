@@ -1,0 +1,16 @@
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+README.md
+.vscode
+.idea
+*.log
+.cache
+.huggingface
+.env
+.DS_Store
+*.pyo
+*.pyd
+
