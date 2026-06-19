@@ -17,7 +17,7 @@ app = FastAPI(
     version="2.0.0"
 )
 
-print("🚀 Carregando modelo SmolLM2-135M (ultra-leve)...")
+print("🚀 Carregando modelo SmolLM2-135M (modo ultra-leve)...")
 
 ID_MODELO = "HuggingFaceTB/SmolLM2-135M-Instruct"
 
@@ -30,7 +30,7 @@ tokenizador = AutoTokenizer.from_pretrained(ID_MODELO)
 if tokenizador.pad_token is None:
     tokenizador.pad_token = tokenizador.eos_token
 
-# 🔥 CARREGAMENTO COM MEMÓRIA MÍNIMA - SEM use_mmap
+# 🔥 SEM QUANTIZAÇÃO - APENAS COM low_cpu_mem_usage
 modelo = AutoModelForCausalLM.from_pretrained(
     ID_MODELO,
     device_map="cpu",
@@ -41,7 +41,6 @@ modelo = AutoModelForCausalLM.from_pretrained(
 
 print("✅ Modelo SmolLM2-135M carregado com sucesso!")
 print(f"💻 Dispositivo em uso: {modelo.device}")
-
 
 # ============================================
 # CLASSES DE REQUISIÇÃO
@@ -227,10 +226,10 @@ def classificar_necessidades(solicitacao: SolicitacaoAnaliseTEA) -> Dict[str, st
 
 
 # ============================================
-# FUNÇÃO DE GERAÇÃO - SMOLM2-135M
+# FUNÇÃO DE GERAÇÃO - SMOLM2-135M COM QUANTIZAÇÃO
 # ============================================
 
-async def gerar_resposta_async(prompt: str, max_tokens: int = 300) -> str:
+async def gerar_resposta_async(prompt: str, max_tokens: int = 200) -> str:
     try:
         mensagens = [
             {"role": "system",
@@ -405,7 +404,7 @@ async def catalogo_tecnologias_tea(solicitacao: SolicitacaoCatalogoTEA):
 async def verificar_saude():
     return {
         "status": "saudavel",
-        "modelo": "SmolLM2-135M-Instruct",
+        "modelo": "SmolLM2-135M-Instruct (8-bit)",
         "dispositivo": "cpu",
         "parametros": "135M"
     }
@@ -442,11 +441,11 @@ if __name__ == "__main__":
     import uvicorn
 
     print("\n" + "=" * 50)
-    print("🎓 API de Tecnologias Assistivas para TEA - SmolLM2-135M")
+    print("🎓 API de Tecnologias Assistivas para TEA - SmolLM2-135M (8-bit)")
     print("=" * 50)
     print(f"📊 Documentação: http://localhost:8000/docs")
     print(f"📝 Endpoint: POST /analisar-aluno-tea/")
-    print(f"💻 Modelo: SmolLM2-135M (ultra-leve)")
+    print(f"💻 Modelo: SmolLM2-135M (quantizado 8-bit)")
     print("=" * 50 + "\n")
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
