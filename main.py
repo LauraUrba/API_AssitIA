@@ -5,6 +5,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
 import torch
 import gc
 import re
+import os
 
 # ============================================
 # CONFIGURAÇÃO INICIAL DA API
@@ -18,20 +19,24 @@ app = FastAPI(
 
 print("🚀 Carregando modelo SmolLM2-135M (ultra-leve)...")
 
-# 🔥 MODELO SMOLM2-135M - FUNCIONA 100%!
 ID_MODELO = "HuggingFaceTB/SmolLM2-135M-Instruct"
+
+# 🔥 OTIMIZAÇÕES PARA REDUZIR MEMÓRIA
+os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
 
 tokenizador = AutoTokenizer.from_pretrained(ID_MODELO)
 
 if tokenizador.pad_token is None:
     tokenizador.pad_token = tokenizador.eos_token
 
+# 🔥 CARREGAMENTO COM MEMÓRIA MÍNIMA - SEM use_mmap
 modelo = AutoModelForCausalLM.from_pretrained(
     ID_MODELO,
     device_map="cpu",
     torch_dtype=torch.float32,
     low_cpu_mem_usage=True,
-    use_cache=True,
+    use_cache=False,  # Desativa cache para economizar memória
 )
 
 print("✅ Modelo SmolLM2-135M carregado com sucesso!")

@@ -12,9 +12,10 @@ RUN pip install --upgrade pip && \
 
 COPY . .
 
-# 🔥 USE APENAS HF_HOME (não use TRANSFORMERS_CACHE)
 ENV HF_HOME=/app/.cache/huggingface
 ENV PYTHONUNBUFFERED=1
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
 
 EXPOSE 8000
 
