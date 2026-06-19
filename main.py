@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, List
+from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
+import torch
 import gc
 import re
-import os
-from llama_cpp import Llama
 
 # ============================================
 # CONFIGURAÇÃO INICIAL DA API
@@ -16,29 +16,26 @@ app = FastAPI(
     version="2.0.0"
 )
 
-print("🚀 Carregando modelo LFM2.5-350M (GGUF)...")
+print("🚀 Carregando modelo SmolLM2-135M (ultra-leve)...")
 
-# 🔥 CAMINHO DO MODELO GGUF
-MODEL_PATH = "./models/LFM2.5-350M-Q4_K_M.gguf"
+# 🔥 MODELO SMOLM2-135M - FUNCIONA 100%!
+ID_MODELO = "HuggingFaceTB/SmolLM2-135M-Instruct"
 
-# Verifica se o arquivo existe
-if not os.path.exists(MODEL_PATH):
-    print(f"⚠️ Arquivo não encontrado: {MODEL_PATH}")
-    print("📥 Baixe o modelo GGUF com:")
-    print("   hf download LiquidAI/LFM2.5-350M-GGUF LFM2.5-350M-Q4_K_M.gguf --local-dir ./models")
-    exit(1)
+tokenizador = AutoTokenizer.from_pretrained(ID_MODELO)
 
-# Carrega o modelo com llama.cpp
-llm = Llama(
-    model_path=MODEL_PATH,
-    n_ctx=32768,  # Contexto de 32K tokens
-    n_threads=2,  # Ajuste para a CPU
-    n_gpu_layers=0,  # 0 = usar apenas CPU
-    verbose=False,
+if tokenizador.pad_token is None:
+    tokenizador.pad_token = tokenizador.eos_token
+
+modelo = AutoModelForCausalLM.from_pretrained(
+    ID_MODELO,
+    device_map="cpu",
+    torch_dtype=torch.float32,
+    low_cpu_mem_usage=True,
+    use_cache=True,
 )
 
-print("✅ Modelo LFM2.5-350M (GGUF) carregado com sucesso!")
-print(f"💻 Modo: CPU")
+print("✅ Modelo SmolLM2-135M carregado com sucesso!")
+print(f"💻 Dispositivo em uso: {modelo.device}")
 
 
 # ============================================
@@ -71,59 +68,59 @@ class SolicitacaoCatalogoTEA(BaseModel):
 CATALOGO_RECURSOS = {
     "comunicacao": [
         {
-            "nome": "Prancha de Comunicação com Figuras Recortadas (PECS adaptado)",
-            "materiais": "Revistas velhas, tesoura, cola, papelão, velcro ou fita adesiva",
-            "como_fazer": "1. Recorte figuras de revistas que representem necessidades básicas. 2. Cole as figuras em quadrados de papelão. 3. Cole velcro atrás de cada figura.",
-            "como_usar": "O aluno aponta ou entrega a figura do que deseja. O professor verbaliza a palavra.",
-            "para_que_serve": "Facilita a comunicação não-verbal e reduz a frustração."
+            "nome": "Prancha de Comunicação com Figuras Recortadas",
+            "materiais": "Revistas velhas, tesoura, cola, papelão, velcro",
+            "como_fazer": "1. Recorte figuras de revistas. 2. Cole em um papelão. 3. Fixe com velcro.",
+            "como_usar": "O aluno aponta para a figura do que deseja.",
+            "para_que_serve": "Facilita a comunicação não-verbal."
         },
         {
             "nome": "Cartões de Comunicação com Tampinhas",
-            "materiais": "Tampinhas de garrafa, papel, canetinhas, cola",
-            "como_fazer": "1. Corte círculos de papel do tamanho das tampinhas. 2. Desenhe símbolos simples. 3. Cole os papéis nas tampinhas.",
-            "como_usar": "O aluno entrega a tampinha com o símbolo que representa o que quer.",
-            "para_que_serve": "Permite comunicação simples e direta."
+            "materiais": "Tampinhas, papel, canetinhas, cola",
+            "como_fazer": "1. Corte círculos de papel. 2. Desenhe símbolos. 3. Cole nas tampinhas.",
+            "como_usar": "O aluno entrega a tampinha com o símbolo.",
+            "para_que_serve": "Permite comunicação simples."
         }
     ],
     "regulacao_sensorial": [
         {
-            "nome": "Garrafa da Calma (Sensory Bottle)",
+            "nome": "Garrafa da Calma",
             "materiais": "Garrafa PET, água, glitter, corante, cola quente",
-            "como_fazer": "1. Encha a garrafa com água até 3/4. 2. Adicione glitter e corante. 3. Feche com cola quente.",
-            "como_usar": "Quando o aluno estiver agitado, agite a garrafa e peça para observar o glitter caindo.",
-            "para_que_serve": "Ajuda na regulação emocional e reduz crises."
+            "como_fazer": "1. Encha com água. 2. Adicione glitter e corante. 3. Feche com cola quente.",
+            "como_usar": "Agite e peça para observar o glitter caindo.",
+            "para_que_serve": "Ajuda na regulação emocional."
         },
         {
-            "nome": "Kit Sensorial com Caixas e Tecidos",
-            "materiais": "Caixa de sapato, tecidos variados, botões, fitas",
-            "como_fazer": "1. Forre a caixa com diferentes tecidos. 2. Cole botões e fitas para criar texturas.",
-            "como_usar": "Deixe o aluno explorar as texturas livremente.",
-            "para_que_serve": "Estimula o tato e ajuda na regulação sensorial."
+            "nome": "Kit Sensorial com Caixas",
+            "materiais": "Caixa de sapato, tecidos variados, botões",
+            "como_fazer": "1. Forre a caixa com tecidos. 2. Cole botões e fitas.",
+            "como_usar": "Deixe o aluno explorar as texturas.",
+            "para_que_serve": "Estimula o tato."
         },
         {
-            "nome": "Fone de Ouvido Caseiro (Redutor de Ruído)",
-            "materiais": "Fone de ouvido velho, espuma, tecido",
-            "como_fazer": "1. Retire as almofadas do fone. 2. Encha com espuma. 3. Recubra com tecido macio.",
-            "como_usar": "O aluno usa em momentos de muito barulho.",
+            "nome": "Fone de Ouvido Caseiro",
+            "materiais": "Fone velho, espuma, tecido",
+            "como_fazer": "1. Retire as almofadas. 2. Encha com espuma. 3. Recubra com tecido.",
+            "como_usar": "Use em momentos de muito barulho.",
             "para_que_serve": "Reduz a sobrecarga auditiva."
         }
     ],
     "estruturacao": [
         {
-            "nome": "Rotina Visual com Caixas de Fósforo",
-            "materiais": "Caixas de fósforo vazias, papel, canetinhas, cola",
-            "como_fazer": "1. Desenhe as atividades em tiras de papel. 2. Coloque cada uma dentro de uma caixinha. 3. Organize as caixas em sequência.",
-            "como_usar": "Mostre a sequência do dia pela manhã. Ao concluir cada atividade, retire a caixa.",
-            "para_que_serve": "Dá previsibilidade ao dia e reduz ansiedade."
+            "nome": "Rotina Visual com Caixas",
+            "materiais": "Caixas de fósforo, papel, canetinhas",
+            "como_fazer": "1. Desenhe as atividades. 2. Coloque em caixas. 3. Organize em sequência.",
+            "como_usar": "Mostre a sequência do dia.",
+            "para_que_serve": "Dá previsibilidade."
         }
     ],
     "interacao_social": [
         {
             "nome": "História Social Ilustrada",
             "materiais": "Papel, canetinhas, grampeador",
-            "como_fazer": "1. Crie uma história curta sobre uma situação social específica. 2. Ilustre cada passo. 3. Grampeie como um livrinho.",
-            "como_usar": "Leia a história com o aluno antes da situação acontecer.",
-            "para_que_serve": "Ensina habilidades sociais de forma visual e previsível."
+            "como_fazer": "1. Crie uma história. 2. Ilustre. 3. Grampeie.",
+            "como_usar": "Leia antes da situação acontecer.",
+            "para_que_serve": "Ensina habilidades sociais."
         }
     ]
 }
@@ -135,61 +132,38 @@ CATALOGO_RECURSOS = {
 
 def buscar_recursos_online(termo_busca: str, max_resultados: int = 3) -> List[Dict]:
     try:
-        try:
-            from ddgs import DDGS
-            version = "ddgs"
-            use_timeout = True
-        except ImportError:
-            from duckduckgo_search import DDGS
-            version = "duckduckgo-search"
-            use_timeout = False
+        from ddgs import DDGS
 
         query = f"tecnologia assistiva TEA autismo {termo_busca}"
         resultados = []
 
-        if use_timeout:
-            with DDGS(timeout=10) as ddgs:
-                for r in ddgs.text(query, region="pt-br", max_results=max_resultados):
-                    resultados.append({
-                        "titulo": r.get("title", ""),
-                        "resumo": r.get("body", "")[:300],
-                        "link": r.get("href", "")
-                    })
-        else:
-            with DDGS() as ddgs:
-                for r in ddgs.text(query, region="pt-br", max_results=max_resultados):
-                    resultados.append({
-                        "titulo": r.get("title", ""),
-                        "resumo": r.get("body", "")[:300],
-                        "link": r.get("href", "")
-                    })
+        with DDGS(timeout=10) as ddgs:
+            for r in ddgs.text(query, region="pt-br", max_results=max_resultados):
+                resultados.append({
+                    "titulo": r.get("title", ""),
+                    "resumo": r.get("body", "")[:300],
+                    "link": r.get("href", "")
+                })
 
-        print(f"✅ Busca online com {version}: {len(resultados)} resultados")
+        print(f"✅ Busca online: {len(resultados)} resultados")
         return resultados
 
     except Exception as e:
-        print(f"⚠️ Busca online indisponível: {type(e).__name__}: {e}")
+        print(f"⚠️ Busca online indisponível: {e}")
         return []
 
 
 def formatar_resultados_online(resultados: List[Dict]) -> str:
     if not resultados:
         return ""
-
-    texto = "\n### 🌐 RECURSOS ENCONTRADOS NA INTERNET (complementar)\n\n"
-    texto += "*Estes resultados foram buscados online e podem trazer ideias adicionais.*\n\n"
-
+    texto = "\n### 🌐 RECURSOS ENCONTRADOS NA INTERNET\n\n"
     for i, r in enumerate(resultados, 1):
-        texto += f"**{i}. {r['titulo']}**\n\n"
-        texto += f"{r['resumo']}...\n\n"
-        texto += f"🔗 Fonte: {r['link']}\n\n"
-        texto += "---\n\n"
-
+        texto += f"**{i}. {r['titulo']}**\n\n{r['resumo']}...\n\n🔗 Fonte: {r['link']}\n\n---\n\n"
     return texto
 
 
 # ============================================
-# FUNÇÕES DO CATÁLOGO
+# FUNÇÕES AUXILIARES
 # ============================================
 
 def identificar_categoria(descricao: str) -> str:
@@ -224,8 +198,7 @@ def formatar_catalogo(recursos: List[Dict]) -> str:
         texto += f"**📦 Materiais:** {recurso['materiais']}\n\n"
         texto += f"**🔧 Como fazer:** {recurso['como_fazer']}\n\n"
         texto += f"**👩‍🏫 Como usar:** {recurso['como_usar']}\n\n"
-        texto += f"**🎯 Para que serve:** {recurso['para_que_serve']}\n\n"
-        texto += "---\n\n"
+        texto += f"**🎯 Para que serve:** {recurso['para_que_serve']}\n\n---\n\n"
     return texto
 
 
@@ -241,50 +214,59 @@ def classificar_necessidades(solicitacao: SolicitacaoAnaliseTEA) -> Dict[str, st
             return "Baixa"
 
     return {
-        "comunicacao": classificar(
-            ["não fala", "não conversa", "não comunica"],
-            ["fala", "conversa", "comunica"]
-        ),
-        "estruturacao": classificar(
-            ["sem rotina", "não segue rotina"],
-            ["rotina", "organiza", "estrutura"]
-        ),
-        "regulacao_sensorial": classificar(
-            ["crise", "grita", "sobrecarga"],
-            ["barulho", "sensorial", "som"]
-        ),
-        "interacao_social": classificar(
-            ["isolado", "não interage"],
-            ["social", "colegas", "intera"]
-        ),
+        "comunicacao": classificar(["não fala", "não conversa"], ["fala", "conversa"]),
+        "estruturacao": classificar(["sem rotina", "não segue"], ["rotina", "organiza"]),
+        "regulacao_sensorial": classificar(["crise", "grita"], ["barulho", "sensorial"]),
+        "interacao_social": classificar(["isolado", "não interage"], ["social", "colegas"]),
     }
 
 
 # ============================================
-# FUNÇÃO DE GERAÇÃO
+# FUNÇÃO DE GERAÇÃO - SMOLM2-135M
 # ============================================
 
-async def gerar_resposta_async(prompt: str, max_tokens: int = 500) -> str:
+async def gerar_resposta_async(prompt: str, max_tokens: int = 300) -> str:
     try:
         mensagens = [
             {"role": "system",
-             "content": "Você é um especialista em Tecnologia Assistiva para TEA. Responda em português de forma clara, prática e direta. Use apenas materiais recicláveis e acessíveis. NUNCA recomende aplicativos, tablets ou tecnologia digital."},
+             "content": "Você é um especialista em Tecnologia Assistiva para TEA. Responda em português de forma clara e prática. PROIBIDO recomendar tecnologia digital."},
             {"role": "user", "content": prompt}
         ]
 
-        response = llm.create_chat_completion(
-            messages=mensagens,
-            max_tokens=max_tokens,
-            temperature=0.3,
-            top_p=0.9,
-            repeat_penalty=1.1,
-            stream=False,
+        texto_formatado = tokenizador.apply_chat_template(
+            mensagens,
+            tokenize=False,
+            add_generation_prompt=True
         )
 
-        resposta = response["choices"][0]["message"]["content"]
+        entradas = tokenizador(
+            texto_formatado,
+            return_tensors="pt",
+            truncation=True,
+            max_length=512
+        ).to(modelo.device)
 
-        if "Olá" in resposta or "Como posso" in resposta:
-            resposta = resposta.replace("Olá", "").replace("Como posso", "")
+        config_geracao = GenerationConfig(
+            max_new_tokens=max_tokens,
+            temperature=0.3,
+            do_sample=True,
+            top_p=0.9,
+            repetition_penalty=1.1,
+            pad_token_id=tokenizador.pad_token_id,
+            eos_token_id=tokenizador.eos_token_id,
+        )
+
+        with torch.no_grad():
+            saidas = modelo.generate(**entradas, generation_config=config_geracao)
+
+        resposta = tokenizador.decode(
+            saidas[0][entradas['input_ids'].shape[1]:],
+            skip_special_tokens=True
+        )
+
+        del entradas, saidas
+        gc.collect()
+        torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
         return resposta.strip()
 
@@ -302,35 +284,33 @@ async def analisar_aluno_tea(solicitacao: SolicitacaoAnaliseTEA):
     categoria = identificar_categoria(solicitacao.descricao_professor)
     recursos = buscar_recursos(categoria, limite=3)
 
-    prompt = f"""Você é um especialista em Tecnologia Assistiva para TEA. NUNCA inicie a resposta com saudações. Vá direto à análise técnica.
+    prompt = f"""Analise o caso e recomende soluções práticas.
 
-    CASO DO ALUNO:
-    - Relato: {solicitacao.descricao_professor}
-    - Idade: {solicitacao.idade_aluno if solicitacao.idade_aluno else "Não informada"}
-    - Interesses: {solicitacao.interesses_especificos if solicitacao.interesses_especificos else "Não informados"}
-    - Sensibilidades: {solicitacao.sensibilidades_sensoriais if solicitacao.sensibilidades_sensoriais else "Não informadas"}
-    - Recursos disponíveis: {solicitacao.recursos_disponiveis if solicitacao.recursos_disponiveis else "Não informados"}
+CASO:
+- Relato: {solicitacao.descricao_professor}
+- Idade: {solicitacao.idade_aluno if solicitacao.idade_aluno else "Nao informada"}
+- Interesses: {solicitacao.interesses_especificos if solicitacao.interesses_especificos else "Nao informados"}
+- Sensibilidades: {solicitacao.sensibilidades_sensoriais if solicitacao.sensibilidades_sensoriais else "Nao informadas"}
 
-    REGRAS:
-    - PROIBIDO recomendar aplicativos, tablets ou tecnologia digital.
-    - Use APENAS materiais recicláveis e acessíveis.
+REGRAS:
+- PROIBIDO recomendar apps, tablets ou tecnologia digital.
+- Use APENAS materiais recicláveis.
 
-    RESPONDA EM PORTUGUÊS:
-
-    1. BARREIRAS: Quais as principais dificuldades?
-    2. SOLUÇÃO PRINCIPAL: Qual adaptação você recomenda?
-    3. SOLUÇÕES ALTERNATIVAS: Liste 2 outras opções
-    4. ADAPTAÇÕES NA ROTINA: Como adaptar o dia a dia?
-    5. DICAS PRÁTICAS: O que o professor pode fazer hoje?"""
+RESPONDA:
+1. BARREIRAS: Quais as principais dificuldades?
+2. SOLUÇÃO PRINCIPAL: Qual adaptação recomenda?
+3. SOLUÇÕES ALTERNATIVAS: Liste 2 opções
+4. ADAPTAÇÕES NA ROTINA: Como adaptar?
+5. DICAS PRÁTICAS: O que fazer hoje?"""
 
     try:
         resposta_ia = await gerar_resposta_async(prompt)
-        if len(resposta_ia.split()) > 30:
+        if len(resposta_ia.split()) > 20 and "Erro" not in resposta_ia:
             analise = f"""### ANÁLISE DO CASO
 
 **Baseado no relato:** "{solicitacao.descricao_professor}"
 
-**Idade:** {solicitacao.idade_aluno if solicitacao.idade_aluno else "Não informada"}
+**Idade:** {solicitacao.idade_aluno if solicitacao.idade_aluno else "Nao informada"}
 
 ---
 
@@ -344,11 +324,11 @@ async def analisar_aluno_tea(solicitacao: SolicitacaoAnaliseTEA):
 
 ### 💡 DICAS PARA O PROFESSOR
 
-1. **Use os interesses do aluno** como ponto de partida
-2. **Observe** o que funciona e ajuste
-3. **Comece com um recurso** de cada vez
-4. **Reforce positivamente** qualquer tentativa de participação
-5. **Comunique-se com a família** sobre o que funciona em casa
+1. Use os interesses do aluno como ponto de partida
+2. Observe o que funciona e ajuste
+3. Comece com um recurso de cada vez
+4. Reforce positivamente qualquer participação
+5. Comunique-se com a família
 """
         else:
             analise = formatar_resposta_fallback(solicitacao, recursos)
@@ -420,9 +400,9 @@ async def catalogo_tecnologias_tea(solicitacao: SolicitacaoCatalogoTEA):
 async def verificar_saude():
     return {
         "status": "saudavel",
-        "modelo": "LiquidAI/LFM2.5-350M (GGUF)",
+        "modelo": "SmolLM2-135M-Instruct",
         "dispositivo": "cpu",
-        "versao": "Q4_K_M"
+        "parametros": "135M"
     }
 
 
@@ -431,7 +411,7 @@ def formatar_resposta_fallback(solicitacao: SolicitacaoAnaliseTEA, recursos: Lis
 
 **Baseado no relato:** "{solicitacao.descricao_professor}"
 
-**Idade:** {solicitacao.idade_aluno if solicitacao.idade_aluno else "Não informada"}
+**Idade:** {solicitacao.idade_aluno if solicitacao.idade_aluno else "Nao informada"}
 
 ---
 
@@ -441,11 +421,11 @@ def formatar_resposta_fallback(solicitacao: SolicitacaoAnaliseTEA, recursos: Lis
 
 ### 💡 DICAS PARA O PROFESSOR
 
-1. **Use os interesses do aluno** como ponto de partida
-2. **Observe** o que funciona e ajuste
-3. **Comece com um recurso** de cada vez
-4. **Reforce positivamente** qualquer tentativa de participação
-5. **Comunique-se com a família** sobre o que funciona em casa
+1. Use os interesses do aluno como ponto de partida
+2. Observe o que funciona e ajuste
+3. Comece com um recurso de cada vez
+4. Reforce positivamente qualquer participação
+5. Comunique-se com a família
 """
 
 
@@ -457,11 +437,11 @@ if __name__ == "__main__":
     import uvicorn
 
     print("\n" + "=" * 50)
-    print("🎓 API de Tecnologias Assistivas para TEA - LFM2.5-350M (GGUF)")
+    print("🎓 API de Tecnologias Assistivas para TEA - SmolLM2-135M")
     print("=" * 50)
     print(f"📊 Documentação: http://localhost:8000/docs")
     print(f"📝 Endpoint: POST /analisar-aluno-tea/")
-    print(f"💻 Modelo: LFM2.5-350M (Q4_K_M)")
+    print(f"💻 Modelo: SmolLM2-135M (ultra-leve)")
     print("=" * 50 + "\n")
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
