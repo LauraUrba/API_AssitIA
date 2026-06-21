@@ -28,25 +28,25 @@ MODEL_PATH = "./models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
 
 # Verifica se o arquivo existe
 if not os.path.exists(MODEL_PATH):
-    print(f"❌ Arquivo não encontrado: {MODEL_PATH}")
+    print(f"X Arquivo não encontrado: {MODEL_PATH}")
     exit(1)
 
-# 🔥 CARREGA O MODELO COM CONFIGURAÇÕES MÍNIMAS
+# CARREGA O MODELO COM CONFIGURAÇÕES MÍNIMAS
 try:
     llm = Llama(
         model_path=MODEL_PATH,
-        n_ctx=512,           # Contexto reduzido
+        n_ctx=256,           # Contexto reduzido
         n_threads=1,         # Apenas 1 thread
         n_gpu_layers=0,      # 0 = apenas CPU
         verbose=False,
-        n_batch=128,
+        n_batch=64,
         use_mmap=True,
         use_mlock=False,
     )
-    print("✅ Modelo TinyLlama-1.1B carregado com sucesso!")
+    print("Modelo TinyLlama-1.1B carregado com sucesso!")
     modelo_ok = True
 except Exception as e:
-    print(f"❌ Erro ao carregar modelo: {e}")
+    print(f" X Erro ao carregar modelo: {e}")
     modelo_ok = False
     llm = None
 
@@ -65,6 +65,10 @@ class SolicitacaoAnaliseTEA(BaseModel):
     incluir_estruturas: bool = True
     recursos_disponiveis: Optional[str] = None
     buscar_online: bool = True
+    comunicacao: Optional[str] = None  # Verbal, Não verbal, Limitada, Misto
+    motor: Optional[str] = None  # Motor Fino, Motor Grosso
+    atencao: Optional[str] = None  # Alta, Média, Baixa
+    comportamentos: Optional[str] = None  # Repetitivos, Flexibilidade
 
 
 class SolicitacaoCatalogoTEA(BaseModel):
@@ -135,6 +139,24 @@ CATALOGO_RECURSOS = {
             "como_fazer": "1. Crie uma história. 2. Ilustre. 3. Grampeie.",
             "como_usar": "Leia antes da situação acontecer.",
             "para_que_serve": "Ensina habilidades sociais."
+        }
+    ],
+    "motor": [
+        {
+            "nome": "Teclado Adaptado com Papelão",
+            "materiais": "Papelão, teclas desenhadas, fita adesiva",
+            "como_fazer": "1. Desenhe um teclado em papelão. 2. Recorte as teclas. 3. Fixe com fita.",
+            "como_usar": "O aluno usa para digitar ou apontar letras.",
+            "para_que_serve": "Auxilia na coordenação motora fina."
+        }
+    ],
+    "cognitivo": [
+        {
+            "nome": "Agenda Visual de Tarefas",
+            "materiais": "Papel, canetinhas, velcro",
+            "como_fazer": "1. Desenhe as tarefas. 2. Recorte. 3. Cole velcro.",
+            "como_usar": "O aluno organiza as tarefas do dia.",
+            "para_que_serve": "Ajuda na organização e planejamento."
         }
     ]
 }
@@ -217,9 +239,46 @@ def formatar_catalogo(recursos: List[Dict]) -> str:
 
 
 def classificar_necessidades(solicitacao: SolicitacaoAnaliseTEA) -> Dict[str, str]:
+    """
+    Classifica as necessidades baseado nos campos da taxonomia
+    """
     descricao = solicitacao.descricao_professor.lower()
 
-    def classificar(termos_alta: list, termos_media: list) -> str:
+    #Função auxiliar para classificar com Baixa
+    def classificar(termos_alta: list, termos_media: list, valor_fornecido: Optional[str] = None) -> str:
+        # Se o professor forneceu um valor específico
+        if valor_fornecido is not None:
+            # 🔥 Valores que indicam ALTA necessidade
+            if valor_fornecido in [
+                "Não verbal",
+                "Limitada",
+                "Repetitivos",
+                "Baixa",  # atenção baixa
+                "Motor Fino",  # dificuldade motora fina
+                "Não verbal",
+                "não verbal",
+                "Nao fala",
+                "não fala"
+            ]:
+                return "Alta"
+
+            # Valores que indicam MÉDIA necessidade
+            elif valor_fornecido in [
+                "Mista",
+                "Moderada",
+                "Motor Grosso",
+                "Verbal limitada",
+                "Fala pouco",
+                "Média",
+                "Regular"
+            ]:
+                return "Média"
+
+            # Valores que indicam BAIXA necessidade
+            else:
+                return "Baixa"
+
+        # Fallback: analisa a descrição
         if any(termo in descricao for termo in termos_alta):
             return "Alta"
         elif any(termo in descricao for termo in termos_media):
@@ -227,16 +286,61 @@ def classificar_necessidades(solicitacao: SolicitacaoAnaliseTEA) -> Dict[str, st
         else:
             return "Baixa"
 
+    # Classifica cada área
+    comunicacao = classificar(
+        termos_alta=["não fala", "não conversa", "não verbal"],
+        termos_media=["fala pouco", "comunica com gestos", "limitada"],
+        valor_fornecido=solicitacao.comunicacao
+    )
+
+    motor = classificar(
+        termos_alta=["coordenação", "motor fino", "dificuldade motora", "escrever"],
+        termos_media=["coordenação média", "motor regular"],
+        valor_fornecido=solicitacao.motor
+    )
+
+    atencao = classificar(
+        termos_alta=["atenção", "concentração", "distração", "hiperativo", "não participa", "não presta atenção"],
+        termos_media=["atenção média", "concentração média", "participa pouco"],
+        valor_fornecido=solicitacao.atencao
+    )
+
+    comportamentos = classificar(
+        termos_alta=["repetitivo", "ritualístico", "inflexível", "estereotipia", "grita", "corre", "andando"],
+        termos_media=["alguns repetitivos", "flexibilidade média", "agitado"],
+        valor_fornecido=solicitacao.comportamentos
+    )
+
+    regulacao_sensorial = classificar(
+        termos_alta=["barulho", "crise", "sensorial", "auditiva", "sobrecarga", "sensibilidade"],
+        termos_media=["sensibilidade média", "desconforto", "incomoda"],
+        valor_fornecido=None
+    )
+
+    interacao_social = classificar(
+        termos_alta=["colegas", "social", "interação", "isolado", "medo"],
+        termos_media=["interage pouco", "social média"],
+        valor_fornecido=None
+    )
+
+    estruturacao = classificar(
+        termos_alta=["rotina", "organiza", "estrutura", "ordem", "planejamento"],
+        termos_media=["rotina média", "organização média"],
+        valor_fornecido=None
+    )
+
     return {
-        "comunicacao": classificar(["não fala", "não conversa"], ["fala", "conversa"]),
-        "estruturacao": classificar(["sem rotina", "não segue"], ["rotina", "organiza"]),
-        "regulacao_sensorial": classificar(["crise", "grita"], ["barulho", "sensorial"]),
-        "interacao_social": classificar(["isolado", "não interage"], ["social", "colegas"]),
+        "comunicacao": comunicacao,
+        "motor": motor,
+        "atencao": atencao,
+        "comportamentos": comportamentos,
+        "regulacao_sensorial": regulacao_sensorial,
+        "interacao_social": interacao_social,
+        "estruturacao": estruturacao,
     }
 
-
 # ============================================
-# FUNÇÃO DE GERAÇÃO - SMOLM2-135M COM QUANTIZAÇÃO
+# FUNÇÃO DE GERAÇÃO
 # ============================================
 
 async def gerar_resposta_async(prompt: str, max_tokens: int = 200) -> str:
@@ -268,7 +372,7 @@ async def gerar_resposta_async(prompt: str, max_tokens: int = 200) -> str:
         return resposta.strip()
 
     except Exception as e:
-        print(f"❌ Erro na geração: {e}")
+        print(f"X Erro na geração: {e}")
         return f"Erro ao gerar resposta: {str(e)}"
 
 
@@ -281,13 +385,21 @@ async def analisar_aluno_tea(solicitacao: SolicitacaoAnaliseTEA):
     categoria = identificar_categoria(solicitacao.descricao_professor)
     recursos = buscar_recursos(categoria, limite=3)
 
+    # Inclui os novos campos no prompt
     prompt = f"""Analise o caso e recomende soluções práticas.
 
 CASO:
 - Relato: {solicitacao.descricao_professor}
 - Idade: {solicitacao.idade_aluno if solicitacao.idade_aluno else "Nao informada"}
+- Nível de suporte: {solicitacao.nivel_suporte if solicitacao.nivel_suporte else "Nao informado"}
 - Interesses: {solicitacao.interesses_especificos if solicitacao.interesses_especificos else "Nao informados"}
 - Sensibilidades: {solicitacao.sensibilidades_sensoriais if solicitacao.sensibilidades_sensoriais else "Nao informadas"}
+
+DADOS ADICIONAIS (baseados na taxonomia TAS):
+- Comunicação: {solicitacao.comunicacao if solicitacao.comunicacao else "Nao informado"}
+- Motor: {solicitacao.motor if solicitacao.motor else "Nao informado"}
+- Atenção: {solicitacao.atencao if solicitacao.atencao else "Nao informada"}
+- Comportamentos: {solicitacao.comportamentos if solicitacao.comportamentos else "Nao informados"}
 
 REGRAS:
 - PROIBIDO recomendar apps, tablets ou tecnologia digital.
@@ -343,7 +455,7 @@ RESPONDA:
 
     resultado = {
         "analise": analise,
-        "categorias_necessidade": categorias,
+        "categorias_necessidade": categorias,  # Agora inclui motor, atencao, comportamentos
     }
 
     if solicitacao.incluir_estruturas:
@@ -356,6 +468,13 @@ RESPONDA:
             estruturas.append("prancha_comunicacao")
         if categorias.get("interacao_social") in ["Alta", "Média"]:
             estruturas.append("historias_sociais")
+        if categorias.get("motor") in ["Alta", "Média"]:
+            estruturas.append("teclado_adaptado")
+        if categorias.get("atencao") in ["Alta", "Média"]:
+            estruturas.append("agenda_visual")
+        if categorias.get("comportamentos") in ["Alta", "Média"]:
+            estruturas.append("estratégias_comportamentais")
+
         resultado["estruturas_recomendadas"] = estruturas
 
     return resultado
@@ -397,9 +516,9 @@ async def catalogo_tecnologias_tea(solicitacao: SolicitacaoCatalogoTEA):
 async def verificar_saude():
     return {
         "status": "saudavel",
-        "modelo": "SmolLM2-135M-Instruct (8-bit)",
+        "modelo": "TinyLlama-1.1B (GGUF)",
         "dispositivo": "cpu",
-        "parametros": "135M"
+        "parametros": "1.1B"
     }
 
 

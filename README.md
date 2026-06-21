@@ -1,4 +1,4 @@
-# Projeto descrito
+## 📝 **README.md atualizado (mantendo o conteúdo antigo + adições do Docker e da nova IA)**
 
 ```markdown
 # 🎓 API de Tecnologias Assistivas para TEA
@@ -13,7 +13,8 @@ Esta API utiliza modelos de linguagem (LLMs) para analisar casos de alunos com T
 
 - **Análise de Casos TEA**: Recebe a descrição do professor sobre o aluno e gera recomendações personalizadas
 - **Catálogo de Tecnologias Assistivas**: Oferece alternativas práticas com materiais recicláveis
-- **Classificação de Necessidades**: Identifica áreas de necessidade (comunicação, estruturação, regulação sensorial, interação social)
+- **Classificação de Necessidades**: Identifica áreas de necessidade baseado na **Taxonomia TAS** (Comunicação, Motor, Atenção, Comportamentos, Regulação Sensorial, Interação Social, Estruturação)
+- **Busca Online**: Complementa as recomendações com resultados da internet via DuckDuckGo
 
 ### 🚫 O que NÃO faz
 
@@ -24,9 +25,10 @@ Esta API utiliza modelos de linguagem (LLMs) para analisar casos de alunos com T
 ## 🛠️ Tecnologias Utilizadas
 
 - **FastAPI** - Framework web para a API
-- **Transformers (Hugging Face)** - Para carregar e rodar o modelo de linguagem
-- **PyTorch** - Framework de deep learning
-- **Qwen2.5-0.5B-Instruct** - Modelo de linguagem leve e eficiente
+- **llama-cpp-python** - Para carregar e rodar o modelo TinyLlama-1.1B em GGUF
+- **TinyLlama-1.1B (GGUF)** - Modelo de linguagem leve e eficiente (apenas ~77 MB em execução)
+- **Docker** - Containerização para otimização de memória no deploy
+- **DuckDuckGo (ddgs)** - Busca online complementar
 
 ## 📦 Instalação
 
@@ -65,9 +67,31 @@ Quando você instala com `pip install "fastapi[standard]"`, ele vem com algumas 
 pip list | grep -E "fastapi|transformers|torch|accelerate"
 ```
 
+## 🐳 Docker (Novidade - Otimização para Render Free)
+
+O projeto agora utiliza Docker para otimizar o consumo de memória e garantir compatibilidade com o Render Free. A mudança para o modelo TinyLlama-1.1B em formato GGUF reduziu drasticamente o consumo de memória de **736 MB para apenas 77 MB**.
+
+### Construir a imagem
+
+```bash
+docker build -t assistia-api .
+```
+
+### Executar localmente
+
+```bash
+docker run -p 8000:8000 assistia-api
+```
+
+### Monitorar memória
+
+```bash
+docker stats assistia-api
+```
+
 ## 🚀 Como Executar
 
-### Desenvolvimento
+### Desenvolvimento (sem Docker)
 
 ```bash
 # Ative o ambiente virtual (se ainda não estiver ativo)
@@ -79,10 +103,10 @@ fastapi dev main.py
 
 A API estará disponível em: `http://localhost:8000`
 
-### Produção
+### Produção (com Docker)
 
 ```bash
-fastapi run main.py
+docker run -d --name assistia-api -p 8000:8000 assistia-api
 ```
 
 ### Documentação Interativa
@@ -110,6 +134,37 @@ fastapi run main.py
 }
 ```
 
+**Campos da Taxonomia TAS (novos):**
+
+| Campo | Descrição | Valores Sugeridos |
+| :--- | :--- | :--- |
+| `comunicacao` | Nível de comunicação | "Verbal", "Não verbal", "Limitada", "Mista" |
+| `motor` | Aspecto motor | "Motor Fino", "Motor Grosso", "Ambos" |
+| `atencao` | Nível de atenção | "Alta", "Média", "Baixa" |
+| `comportamentos` | Características comportamentais | "Repetitivos", "Flexibilidade", "Agitado" |
+
+**Resposta:**
+
+```json
+{
+  "analise": "Análise detalhada do caso com recomendações...",
+  "categorias_necessidade": {
+    "comunicacao": "Alta",
+    "motor": "Baixa",
+    "atencao": "Média",
+    "comportamentos": "Média",
+    "regulacao_sensorial": "Média",
+    "interacao_social": "Alta",
+    "estruturacao": "Média"
+  },
+  "estruturas_recomendadas": [
+    "prancha_comunicacao",
+    "kit_sensorial",
+    "rotina_visual",
+    "historias_sociais"
+  ]
+}
+```
 
 ### 2. Catálogo de Tecnologias Alternativas
 
@@ -126,7 +181,6 @@ fastapi run main.py
 }
 ```
 
-
 ### 3. Verificar Saúde da API
 
 **GET** `/saude/`
@@ -136,8 +190,9 @@ fastapi run main.py
 ```json
 {
   "status": "saudavel",
-  "modelo": "Qwen/Qwen2.5-0.5B-Instruct",
-  "dispositivo": "cpu"
+  "modelo": "TinyLlama-1.1B (GGUF)",
+  "dispositivo": "cpu",
+  "parametros": "1.1B"
 }
 ```
 
@@ -165,37 +220,143 @@ curl -X 'POST' \
 ```
 assistIA_api_tcc/
 ├── .venv/                 # Ambiente virtual
-├── .gitignore            # Arquivos ignorados pelo Git
+├── .dockerignore          # Arquivos ignorados pelo Docker
+├── .gitignore             # Arquivos ignorados pelo Git
+├── Dockerfile             # Configuração do Docker (com download do modelo)
 ├── main.py               # Código principal da API
 ├── README.md             # Documentação do projeto
 ├── requirements.txt      # Dependências do projeto
 ├── render.yaml           # Configuração para deploy no Render
-└── runtime.txt           # Versão do Python para deploy
+├── runtime.txt           # Versão do Python para deploy
+└── models/                # Pasta onde o modelo GGUF é baixado
+    └── tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf  # Modelo (638 MB)
 ```
+
+## 🐳 Otimização de Memória para Render Free
+
+O projeto foi otimizado para rodar no Render Free (512 MB de RAM). A mudança mais significativa foi a troca do modelo de IA.
+
+### 🔄 Mudança do Modelo de IA
+
+| Aspecto | Antes | Depois |
+| :--- | :--- | :--- |
+| **Modelo** | SmolLM2-135M (PyTorch) | **TinyLlama-1.1B (GGUF)** |
+| **Formato** | `.safetensors` | **`.gguf` (quantizado Q4_K_M)** |
+| **Biblioteca** | `transformers` + `torch` | **`llama-cpp-python`** |
+| **Memória em execução** | ~736 MB | **~77 MB** |
+| **Cabe no Render Free?** | ❌ Não | ✅ **Sim** |
+
+### 📊 Otimizações Aplicadas
+
+| Etapa | Otimização | Resultado |
+| :--- | :--- | :--- |
+| **Modelo** | PyTorch (SmolLM2) → TinyLlama GGUF | 736 MB → **77 MB** |
+| **Contexto** | `max_length=512` → `max_length=256` | Redução de ~30% |
+| **Cache** | `use_cache=False` | Economia de memória |
+| **Threads** | `OMP_NUM_THREADS=1` | Redução de overhead |
+| **Quantização** | GGUF Q4_K_M | Modelo otimizado para CPU |
+
+### 📊 Consumo de Memória Atual:
+
+| Componente | Memória |
+| :--- | :--- |
+| **TinyLlama-1.1B (GGUF)** | ~77 MB |
+| **FastAPI + Uvicorn** | ~50 MB |
+| **Total** | **~127 MB** |
+
+✅ **Cabe perfeitamente no Render Free (512 MB)!**
+
+## 🏗️ Taxonomia TAS (Tecnologia Assistiva)
+
+A API foi atualizada para seguir a Taxonomia TAS desenvolvida para categorizar:
+
+### 📊 Categorias do Perfil do Estudante
+
+| Categoria | Descrição | Níveis |
+| :--- | :--- | :--- |
+| **Comunicação** | Verbal / Não verbal / Limitada / Mista | Alta, Média, Baixa |
+| **Motor** | Motor Fino / Motor Grosso / Ambos | Alta, Média, Baixa |
+| **Atenção** | Capacidade de concentração | Alta, Média, Baixa |
+| **Comportamentos** | Repetitivos / Flexibilidade / Agitado | Alta, Média, Baixa |
+| **Regulação Sensorial** | Auditiva, Tátil, Visual, Olfativa | Alta, Média, Baixa |
+| **Interação Social** | Relação com colegas | Alta, Média, Baixa |
+| **Estruturação** | Necessidade de rotina | Alta, Média, Baixa |
+
+### 📌 Tecnologias Assistivas Recomendadas
+
+| Categoria | Recursos |
+| :--- | :--- |
+| **Comunicação** | Prancha PECS, Cartões com Tampinhas |
+| **Sensorial** | Garrafa da Calma, Kit Sensorial, Fone de Ouvido Caseiro |
+| **Estruturação** | Rotina Visual com Caixas |
+| **Social** | História Social Ilustrada |
+| **Motor** | Teclado Adaptado com Papelão |
+| **Cognitivo** | Agenda Visual de Tarefas |
 
 ## ⚠️ Limitações Conhecidas
 
-1. **Modelo pequeno**: O Qwen2.5-0.5B é um modelo pequeno e pode não gerar respostas tão detalhadas quanto modelos maiores
-2. **Contexto limitado**: O modelo tem limite de 2048 tokens
+1. **Modelo pequeno**: O TinyLlama-1.1B é um modelo pequeno e pode não gerar respostas tão detalhadas quanto modelos maiores
+2. **Contexto limitado**: O modelo tem limite de 256 tokens (configurado para economizar memória)
 3. **Sem tecnologia digital**: A API NÃO recomenda apps, tablets ou tecnologia digital
 4. **CPU apenas**: O modelo roda em CPU, o que pode ser mais lento que GPU
+5. **Busca online**: Limitada a 3 resultados por requisição
 
-  ```
+## 🌐 Deploy
+
+### Deploy no Render (Gratuito)
+
+1. **Faça o push do código para o GitHub**
+2. **Conecte o repositório ao Render**
+3. **Selecione a opção "Docker"** como ambiente
+4. **Instance Type: Free**
+5. **Clique em "Deploy"**
+
+**URL do projeto:** `https://api-assitia.onrender.com`
+
+### Deploy Local
+
+```bash
+# Com Docker
+docker build -t assistia-api .
+docker run -p 8000:8000 assistia-api
+
+# Sem Docker
+fastapi dev main.py
+```
+
 ## 📚 Referências
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [llama-cpp-python](https://github.com/abetlen/llama-cpp-python)
+- [TinyLlama-1.1B](https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF)
 - [Hugging Face Transformers](https://huggingface.co/docs/transformers)
-- [Qwen2.5-0.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct)
-  
+- [Render Web Services](https://render.com/docs/web-services)
+
 ## 📝 Licença
 
 Este projeto é para fins acadêmicos (TCC). Todos os direitos reservados.
 
 ## 👨‍🎓 Autores
 
-- Laura
+- Laura - [GitHub](https://github.com/LauraUrba)
 
+---
 
+**Desenvolvido para o Trabalho de Conclusão de Curso (TCC)** 🎓
+```
 
+---
 
+## ✅ **Resumo das adições ao README:**
 
+| Seção | O que foi adicionado |
+| :--- | :--- |
+| **Tecnologias** | `llama-cpp-python`, TinyLlama GGUF, Docker |
+| **Docker** | Seção completa sobre otimização e uso |
+| **Mudança do Modelo** | Tabela comparativa Antes x Depois |
+| **Otimização de Memória** | Tabela com as otimizações aplicadas |
+| **Taxonomia TAS** | Documentação completa dos campos |
+| **Estrutura** | Adicionado `models/` e `Dockerfile` |
+| **Deploy** | Instruções atualizadas para Docker no Render |
+
+**Pronto! O README mantém tudo que já existia e adiciona as novidades! 🚀**
