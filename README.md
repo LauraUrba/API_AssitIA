@@ -1,5 +1,3 @@
-## 📝 **README.md atualizado (mantendo o conteúdo antigo + adições do Docker e da nova IA)**
-
 ```markdown
 # 🎓 API de Tecnologias Assistivas para TEA
 
@@ -358,5 +356,3 @@ Este projeto é para fins acadêmicos (TCC). Todos os direitos reservados.
 | **Taxonomia TAS** | Documentação completa dos campos |
 | **Estrutura** | Adicionado `models/` e `Dockerfile` |
 | **Deploy** | Instruções atualizadas para Docker no Render |
-
-**Pronto! O README mantém tudo que já existia e adiciona as novidades! 🚀**
