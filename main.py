@@ -177,40 +177,93 @@ CATALOGO_RECURSOS = {
 # BUSCA ONLINE
 # ============================================
 
-def buscar_recursos_online(termo_busca: str, max_resultados: int = 5) -> List[Dict]:
+def buscar_recursos_online(termo_busca: str, max_resultados: int = 10) -> List[Dict]:
     """
-    Busca tecnologias assistivas online com mais fontes
+    Busca tecnologias assistivas online com múltiplas fontes e filtros
     """
     try:
         from ddgs import DDGS
 
-        # 🔥 MÚLTIPLAS QUERIES PARA MAIS RESULTADOS
+        # 🔥 MÚLTIPLAS QUERIES ESTRATÉGICAS
         queries = [
             f"tecnologia assistiva TEA autismo {termo_busca}",
+            f"recursos pedagógicos autismo TEA {termo_busca}",
+            f"atividades adaptadas autismo TEA {termo_busca}",
+            f"comunicação alternativa autismo TEA {termo_busca}",
+            f"materiais adaptados autismo TEA {termo_busca}",
             f"dicas autismo TEA professor {termo_busca}",
-            f"atividades autismo sala de aula {termo_busca}",
-            f"recursos pedagógicos autismo TEA {termo_busca}"
+            f"tecnologias assistivas baixo custo autismo {termo_busca}",
+            f"autismo TEA inclusão escolar recursos {termo_busca}",
+            f"apps educativos autismo TEA {termo_busca}",
+            f"jogos pedagógicos autismo TEA {termo_busca}"
         ]
 
         resultados = []
-        for query in queries:
-            with DDGS(timeout=10) as ddgs:
-                for r in ddgs.text(query, region="pt-br", max_results=2):
-                    # 🔥 VERIFICA SE O LINK JÁ FOI ADICIONADO
-                    if not any(res.get("link") == r.get("href") for res in resultados):
-                        # 🔥 INFORMA A FONTE
-                        fonte = "YouTube" if "youtube" in r.get("href", "") else \
-                            "Instagram" if "instagram" in r.get("href", "") else \
-                                "TikTok" if "tiktok" in r.get("href", "") else \
-                                    "Site"
-                        resultados.append({
-                            "titulo": r.get("title", ""),
-                            "resumo": r.get("body", "")[:300],
-                            "link": r.get("href", ""),
-                            "fonte": fonte
-                        })
+        links_unicos = set()  # 🔥 PARA EVITAR DUPLICATAS
 
-        return resultados[:5]  # Máximo 5 resultados
+        for query in queries:
+            try:
+                with DDGS(timeout=15) as ddgs:
+                    for r in ddgs.text(query, region="pt-br", max_results=3):
+                        link = r.get("href", "")
+
+                        # 🔥 FILTRAR LINKS VÁLIDOS
+                        if not link or link in links_unicos:
+                            continue
+
+                        # 🔥 FILTRAR POR TIPO DE FONTE
+                        fonte = "YouTube" if "youtube" in link or "youtu.be" in link else \
+                            "Instagram" if "instagram" in link else \
+                                "TikTok" if "tiktok" in link else \
+                                    "LinkedIn" if "linkedin" in link else \
+                                        "Site Educacional" if "educ" in link or "escola" in link else \
+                                            "Site"
+
+                        # 🔥 IGNORAR SITES COMERCIAIS
+                        sites_comerciais = ["amazon", "mercadolivre", "shopee", "aliexpress"]
+                        if any(site in link.lower() for site in sites_comerciais):
+                            continue
+
+                        titulo = r.get("title", "").strip()
+                        resumo = r.get("body", "").strip()[:300]
+
+                        # 🔥 FILTRAR POR PALAVRAS-CHAVE RELEVANTES
+                        palavras_chave = ["autismo", "tea", "inclusão", "pedagógico", "educativo",
+                                          "adaptado", "assistiva", "comunicação", "sensorial", "motor"]
+
+                        texto_busca = (titulo + " " + resumo).lower()
+                        relevancia = sum(1 for p in palavras_chave if p in texto_busca)
+
+                        if relevancia >= 2:  # Mínimo 2 palavras-chave
+                            links_unicos.add(link)
+                            resultados.append({
+                                "titulo": titulo or f"Recurso sobre {termo_busca}",
+                                "resumo": resumo or "Recurso encontrado na internet",
+                                "link": link,
+                                "fonte": fonte,
+                                "relevancia": relevancia
+                            })
+
+                            if len(resultados) >= max_resultados:
+                                break
+            except Exception as e:
+                print(f"⚠️ Erro na query '{query}': {e}")
+                continue
+
+        # 🔥 ORDENAR POR RELEVÂNCIA
+        resultados.sort(key=lambda x: x.get("relevancia", 0), reverse=True)
+
+        # 🔥 REMOVER DUPLICATAS POR TÍTULO SIMILAR
+        titulos_vistos = set()
+        resultados_finais = []
+        for r in resultados:
+            titulo_limpo = r["titulo"].lower().strip()
+            if titulo_limpo not in titulos_vistos:
+                titulos_vistos.add(titulo_limpo)
+                resultados_finais.append(r)
+
+        print(f"✅ Busca online: {len(resultados_finais)} resultados únicos")
+        return resultados_finais[:max_resultados]
 
     except Exception as e:
         print(f"⚠️ Busca online indisponível: {e}")
