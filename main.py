@@ -35,11 +35,11 @@ if not os.path.exists(MODEL_PATH):
 try:
     llm = Llama(
         model_path=MODEL_PATH,
-        n_ctx=256,           # Contexto reduzido
+        n_ctx=128,           # Contexto reduzido
         n_threads=1,         # Apenas 1 thread
         n_gpu_layers=0,      # 0 = apenas CPU
         verbose=False,
-        n_batch=64,
+        n_batch=32,
         use_mmap=True,
         use_mlock=False,
     )
@@ -65,10 +65,21 @@ class SolicitacaoAnaliseTEA(BaseModel):
     incluir_estruturas: bool = True
     recursos_disponiveis: Optional[str] = None
     buscar_online: bool = True
-    comunicacao: Optional[str] = None  # Verbal, Não verbal, Limitada, Misto
+
+    # 🔥 CAMPOS DO FORMULÁRIO
+    comunicacao: Optional[str] = None  # Verbal, Não verbal, Limitada, Mista
     motor: Optional[str] = None  # Motor Fino, Motor Grosso
     atencao: Optional[str] = None  # Alta, Média, Baixa
     comportamentos: Optional[str] = None  # Repetitivos, Flexibilidade
+
+    # 🔥 NOVOS CAMPOS DO FORMULÁRIO
+    area_principal: Optional[
+        str] = None  # Comunicação, Regulação Sensorial, Motor, Cognitivo, Interação Social, Estruturação
+    prioridade: Optional[str] = None  # Alta, Média, Baixa
+    areas_atencao: Optional[str] = None  # Lista de áreas separadas por vírgula
+    interesses: Optional[str] = None  # Lista de interesses + observações
+    sensibilidades: Optional[str] = None  # Lista de sensibilidades + observações
+    recursos: Optional[str] = None  # Lista de recursos + observações
 
 
 class SolicitacaoCatalogoTEA(BaseModel):
@@ -166,23 +177,40 @@ CATALOGO_RECURSOS = {
 # BUSCA ONLINE
 # ============================================
 
-def buscar_recursos_online(termo_busca: str, max_resultados: int = 3) -> List[Dict]:
+def buscar_recursos_online(termo_busca: str, max_resultados: int = 5) -> List[Dict]:
+    """
+    Busca tecnologias assistivas online com mais fontes
+    """
     try:
         from ddgs import DDGS
 
-        query = f"tecnologia assistiva TEA autismo {termo_busca}"
+        # 🔥 MÚLTIPLAS QUERIES PARA MAIS RESULTADOS
+        queries = [
+            f"tecnologia assistiva TEA autismo {termo_busca}",
+            f"dicas autismo TEA professor {termo_busca}",
+            f"atividades autismo sala de aula {termo_busca}",
+            f"recursos pedagógicos autismo TEA {termo_busca}"
+        ]
+
         resultados = []
+        for query in queries:
+            with DDGS(timeout=10) as ddgs:
+                for r in ddgs.text(query, region="pt-br", max_results=2):
+                    # 🔥 VERIFICA SE O LINK JÁ FOI ADICIONADO
+                    if not any(res.get("link") == r.get("href") for res in resultados):
+                        # 🔥 INFORMA A FONTE
+                        fonte = "YouTube" if "youtube" in r.get("href", "") else \
+                            "Instagram" if "instagram" in r.get("href", "") else \
+                                "TikTok" if "tiktok" in r.get("href", "") else \
+                                    "Site"
+                        resultados.append({
+                            "titulo": r.get("title", ""),
+                            "resumo": r.get("body", "")[:300],
+                            "link": r.get("href", ""),
+                            "fonte": fonte
+                        })
 
-        with DDGS(timeout=10) as ddgs:
-            for r in ddgs.text(query, region="pt-br", max_results=max_resultados):
-                resultados.append({
-                    "titulo": r.get("title", ""),
-                    "resumo": r.get("body", "")[:300],
-                    "link": r.get("href", "")
-                })
-
-        print(f"✅ Busca online: {len(resultados)} resultados")
-        return resultados
+        return resultados[:5]  # Máximo 5 resultados
 
     except Exception as e:
         print(f"⚠️ Busca online indisponível: {e}")
@@ -192,9 +220,20 @@ def buscar_recursos_online(termo_busca: str, max_resultados: int = 3) -> List[Di
 def formatar_resultados_online(resultados: List[Dict]) -> str:
     if not resultados:
         return ""
+
     texto = "\n### 🌐 RECURSOS ENCONTRADOS NA INTERNET\n\n"
+
     for i, r in enumerate(resultados, 1):
-        texto += f"**{i}. {r['titulo']}**\n\n{r['resumo']}...\n\n🔗 Fonte: {r['link']}\n\n---\n\n"
+        # 🔥 ÍCONE DA FONTE
+        icone = "▶️" if r.get("fonte") == "YouTube" else \
+            "📸" if r.get("fonte") == "Instagram" else \
+                "🎵" if r.get("fonte") == "TikTok" else \
+                    "🌐"
+        texto += f"**{i}. {icone} {r['titulo']}**\n\n"
+        texto += f"{r['resumo']}...\n\n"
+        texto += f"🔗 Fonte: {r['link']}\n\n"
+        texto += "---\n\n"
+
     return texto
 
 
@@ -343,7 +382,7 @@ def classificar_necessidades(solicitacao: SolicitacaoAnaliseTEA) -> Dict[str, st
 # FUNÇÃO DE GERAÇÃO
 # ============================================
 
-async def gerar_resposta_async(prompt: str, max_tokens: int = 200) -> str:
+async def gerar_resposta_async(prompt: str, max_tokens: int = 80) -> str:
     """Gera resposta usando TinyLlama via llama-cpp-python"""
     if not modelo_ok or llm is None:
         return "Modelo indisponível. Use o catálogo de recursos."
@@ -385,17 +424,43 @@ async def analisar_aluno_tea(solicitacao: SolicitacaoAnaliseTEA):
     categoria = identificar_categoria(solicitacao.descricao_professor)
     recursos = buscar_recursos(categoria, limite=3)
 
-    # Inclui os novos campos no prompt
+    # 🔥 COMBINA OS CAMPOS DO FORMULÁRIO
+    interesses_final = []
+    if solicitacao.interesses_especificos:
+        interesses_final.append(solicitacao.interesses_especificos)
+    if solicitacao.interesses:
+        interesses_final.append(solicitacao.interesses)
+    interesses_texto = ", ".join(filter(None, interesses_final)) if interesses_final else "Nao informados"
+
+    sensibilidades_final = []
+    if solicitacao.sensibilidades_sensoriais:
+        sensibilidades_final.append(solicitacao.sensibilidades_sensoriais)
+    if solicitacao.sensibilidades:
+        sensibilidades_final.append(solicitacao.sensibilidades)
+    sensibilidades_texto = ", ".join(filter(None, sensibilidades_final)) if sensibilidades_final else "Nao informadas"
+
+    recursos_final = []
+    if solicitacao.recursos_disponiveis:
+        recursos_final.append(solicitacao.recursos_disponiveis)
+    if solicitacao.recursos:
+        recursos_final.append(solicitacao.recursos)
+    recursos_texto = ", ".join(filter(None, recursos_final)) if recursos_final else "Nao informados"
+
+    # 🔥 PROMPT COMPLETO COM TODOS OS DADOS
     prompt = f"""Analise o caso e recomende soluções práticas.
 
 CASO:
 - Relato: {solicitacao.descricao_professor}
 - Idade: {solicitacao.idade_aluno if solicitacao.idade_aluno else "Nao informada"}
 - Nível de suporte: {solicitacao.nivel_suporte if solicitacao.nivel_suporte else "Nao informado"}
-- Interesses: {solicitacao.interesses_especificos if solicitacao.interesses_especificos else "Nao informados"}
-- Sensibilidades: {solicitacao.sensibilidades_sensoriais if solicitacao.sensibilidades_sensoriais else "Nao informadas"}
+- Interesses: {interesses_texto}
+- Sensibilidades: {sensibilidades_texto}
+- Recursos disponíveis: {recursos_texto}
 
-DADOS ADICIONAIS (baseados na taxonomia TAS):
+DADOS DO FORMULÁRIO:
+- Área Principal: {solicitacao.area_principal if solicitacao.area_principal else "Nao informada"}
+- Prioridade: {solicitacao.prioridade if solicitacao.prioridade else "Nao informada"}
+- Áreas de Atenção: {solicitacao.areas_atencao if solicitacao.areas_atencao else "Nao informadas"}
 - Comunicação: {solicitacao.comunicacao if solicitacao.comunicacao else "Nao informado"}
 - Motor: {solicitacao.motor if solicitacao.motor else "Nao informado"}
 - Atenção: {solicitacao.atencao if solicitacao.atencao else "Nao informada"}

@@ -2,25 +2,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Instala dependências para compilar o llama-cpp-python e baixar o modelo
+# INSTALA COMPILADORES PARA O LLAMA-CPP-PYTHON
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     build-essential \
     cmake \
-    wget \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# BAIXA O MODELO DURANTE O BUILD (em vez de copiar do repositório)
-RUN mkdir -p /app/models && \
-    wget -O /app/models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf \
-    https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
-
+# COPIA O CÓDIGO DEPOIS DA INSTALAÇÃO
 COPY . .
 
 ENV HF_HOME=/app/.cache/huggingface

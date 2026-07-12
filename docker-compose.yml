@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: assistia-api
+    ports:
+      - "8000:8000"
+    environment:
+      - HF_HOME=/app/.cache/huggingface
+      - PYTHONUNBUFFERED=1
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+    volumes:
+      - ./models:/app/models
+    mem_limit: 400m
+    mem_reservation: 200m
+    cpus: '0.5'
+    restart: unless-stopped
