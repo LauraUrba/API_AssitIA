@@ -184,7 +184,6 @@ def buscar_recursos_online(termo_busca: str, max_resultados: int = 10) -> List[D
     try:
         from ddgs import DDGS
 
-        # 🔥 MÚLTIPLAS QUERIES ESTRATÉGICAS
         queries = [
             f"tecnologia assistiva TEA autismo {termo_busca}",
             f"recursos pedagógicos autismo TEA {termo_busca}",
