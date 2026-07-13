@@ -35,11 +35,11 @@ if not os.path.exists(MODEL_PATH):
 try:
     llm = Llama(
         model_path=MODEL_PATH,
-        n_ctx=128,           # Contexto reduzido
-        n_threads=1,         # Apenas 1 thread
+        n_ctx=64,           # Contexto reduzido
+        n_threads=2,         # Apenas 1 thread
         n_gpu_layers=0,      # 0 = apenas CPU
         verbose=False,
-        n_batch=32,
+        n_batch=16,
         use_mmap=True,
         use_mlock=False,
     )
@@ -434,7 +434,7 @@ def classificar_necessidades(solicitacao: SolicitacaoAnaliseTEA) -> Dict[str, st
 # FUNÇÃO DE GERAÇÃO
 # ============================================
 
-async def gerar_resposta_async(prompt: str, max_tokens: int = 80) -> str:
+async def gerar_resposta_async(prompt: str, max_tokens: int = 40) -> str:
     """Gera resposta usando TinyLlama via llama-cpp-python"""
     if not modelo_ok or llm is None:
         return "Modelo indisponível. Use o catálogo de recursos."
