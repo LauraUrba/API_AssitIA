@@ -1,9 +1,7 @@
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-llama-cpp-python==0.2.87
 pydantic==2.5.3
 pydantic-core==2.14.6
 python-multipart==0.0.6
+llama-cpp-python==0.2.87
 ddgs==9.14.4
-numpy==1.24.4
-huggingface-hub>=0.20.0
