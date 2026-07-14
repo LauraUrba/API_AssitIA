@@ -421,7 +421,6 @@ def formatar_resultados_online(resultados: List[Dict]) -> str:
         texto += f"**{i}. {icone} {r['titulo']}**\n\n"
         texto += f"{r['resumo']}...\n\n"
         texto += f"🔗 **Fonte:** {fonte}\n"
-        texto += f"📎 **Link:** {r['link']}\n\n"
         texto += "---\n\n"
 
     return texto
