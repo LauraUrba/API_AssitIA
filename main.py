@@ -344,6 +344,8 @@ def buscar_recursos_online(termo_busca: str, max_resultados: int = 10) -> List[D
             f"autismo TEA inclusão escolar recursos {termo_busca}",
             f"apps educativos autismo TEA {termo_busca}",
             f"jogos pedagógicos autismo TEA {termo_busca}"
+            f"autismo recursos educacionais gratuitos {termo_busca}",
+            f"TEA material adaptado professor {termo_busca}"
         ]
 
         resultados = []
@@ -352,21 +354,34 @@ def buscar_recursos_online(termo_busca: str, max_resultados: int = 10) -> List[D
         for query in queries:
             try:
                 with DDGS(timeout=15) as ddgs:
-                    for r in ddgs.text(query, region="pt-br", max_results=3):
+                    for r in ddgs.text(query, region="pt-br", max_results=5):
                         link = r.get("href", "")
 
                         if not link or link in links_unicos:
                             continue
 
-                        if "youtube" in link or "youtu.be" in link:
+                        if "facebook.com" in link or "twitter.com" in link:
+                            continue
+
+                            # Determinar fonte
+                        if "youtube.com" in link or "youtu.be" in link:
                             fonte = "YouTube"
                             icone = "▶️"
-                        elif "instagram" in link:
+                        elif "instagram.com" in link:
                             fonte = "Instagram"
                             icone = "📸"
-                        elif "tiktok" in link:
+                        elif "tiktok.com" in link:
                             fonte = "TikTok"
                             icone = "🎵"
+                        elif ".pdf" in link.lower():
+                            fonte = "PDF"
+                            icone = "📄"
+                        elif "slideshare" in link:
+                            fonte = "Slideshare"
+                            icone = "📊"
+                        elif "edu" in link or "educ" in link:
+                            fonte = "Educacional"
+                            icone = "🎓"
                         else:
                             fonte = "Site"
                             icone = "🌐"
@@ -379,7 +394,8 @@ def buscar_recursos_online(termo_busca: str, max_resultados: int = 10) -> List[D
                         resumo = r.get("body", "").strip()[:300]
 
                         palavras_chave = ["autismo", "tea", "inclusão", "pedagógico", "educativo",
-                                          "adaptado", "assistiva", "comunicação", "sensorial", "motor"]
+                                          "adaptado", "assistiva", "comunicação", "sensorial", "motor",
+                                          "aprendizagem", "neurodivergente", "espectro"]
 
                         texto_busca = (titulo + " " + resumo).lower()
                         relevancia = sum(1 for p in palavras_chave if p in texto_busca)
@@ -410,6 +426,7 @@ def buscar_recursos_online(termo_busca: str, max_resultados: int = 10) -> List[D
 
 
 def formatar_resultados_online(resultados: List[Dict]) -> str:
+    """Formata resultados da busca online com links reais"""
     if not resultados:
         return ""
 
@@ -418,9 +435,19 @@ def formatar_resultados_online(resultados: List[Dict]) -> str:
     for i, r in enumerate(resultados, 1):
         icone = r.get("icone", "🌐")
         fonte = r.get("fonte", "Site")
+        link = r.get("link", "")
+
         texto += f"**{i}. {icone} {r['titulo']}**\n\n"
         texto += f"{r['resumo']}...\n\n"
-        texto += f"🔗 **Fonte:** {fonte}\n"
+
+        # 🔥 CORREÇÃO: Incluir o link REAL
+        if link:
+            texto += f"🔗 **Fonte:** [{fonte}]({link})\n"
+            # Também incluir link puro para regex pegar
+            texto += f"📎 **Link:** {link}\n"
+        else:
+            texto += f"🔗 **Fonte:** {fonte}\n"
+
         texto += "---\n\n"
 
     return texto
