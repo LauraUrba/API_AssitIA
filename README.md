@@ -88,21 +88,21 @@ assistIA_api_tcc/
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                           PROFESSOR                                 │
-│                    (envia dados do aluno)                          │
+│                    (envia dados do aluno)                           │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        API (main.py)                               │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  1. Recebe dados do aluno (descrição, nível, áreas, etc)   │   │
-│  │  2. Busca base de conhecimento (RAG) no banco vetorial     │   │
-│  │  3. Para cada área selecionada:                            │   │
-│  │     └─► Monta prompt dinâmico (prompt_assistia.py)         │   │
-│  │     └─► Chama o modelo (Ollama/llama3.2:1b)               │   │
-│  │     └─► Gera UMA atividade específica                     │   │
-│  │  4. Concatena todas as atividades geradas                  │   │
-│  └─────────────────────────────────────────────────────────────┘   │
+│                        API (main.py)                                │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  1. Recebe dados do aluno (descrição, nível, áreas, etc)    │    │
+│  │  2. Busca base de conhecimento (RAG) no banco vetorial      │    │
+│  │  3. Para cada área selecionada:                             │    │
+│  │     └─► Monta prompt dinâmico (prompt_assistia.py)          │    │
+│  │     └─► Chama o modelo (Ollama/llama3.2:1b)                 │    │
+│  │     └─► Gera UMA atividade específica                       │    │
+│  │  4. Concatena todas as atividades geradas                   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                     ┌───────────────┼───────────────┐
@@ -115,7 +115,7 @@ assistIA_api_tcc/
                                     ▼
                     ┌───────────────────────────────┐
                     │    RESPOSTA FINAL             │
-                    │    (Atividades adaptadas)      │
+                    │    (Atividades adaptadas)     │
                     └───────────────────────────────┘
 ```
 
@@ -123,40 +123,40 @@ assistIA_api_tcc/
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                       BASE DE CONHECIMENTO                         │
-│                    (dados/planilha_tea.csv + PDFs)                 │
+│                       BASE DE CONHECIMENTO                          │
+│                    (dados/planilha_tea.csv + PDFs)                  │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    CRIAÇÃO DO BANCO VETORIAL                       │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  1. Carrega PDFs e CSVs (criar_bd.py)                     │   │
-│  │  2. Divide em chunks (RecursiveCharacterTextSplitter)     │   │
-│  │  3. Gera embeddings (nomic-embed-text)                    │   │
-│  │  4. Armazena no ChromaDB (api/db/)                       │   │
-│  └─────────────────────────────────────────────────────────────┘   │
+│                    CRIAÇÃO DO BANCO VETORIAL                        │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  1. Carrega PDFs e CSVs (criar_bd.py)                       │    │
+│  │  2. Divide em chunks (RecursiveCharacterTextSplitter)       │    │
+│  │  3. Gera embeddings (nomic-embed-text)                      │    │
+│  │  4. Armazena no ChromaDB (api/db/)                          │    │
+│  └─────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                          BUSCA SEMÂNTICA                           │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  1. Recebe pergunta do professor                           │   │
-│  │  2. Gera embedding da pergunta                             │   │
-│  │  3. Busca chunks mais relevantes (similaridade)           │   │
-│  │  4. Retorna documentos filtrados por relevância           │   │
-│  └─────────────────────────────────────────────────────────────┘   │
+│                          BUSCA SEMÂNTICA                            │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  1. Recebe pergunta do professor                            │    │
+│  │  2. Gera embedding da pergunta                              │    │
+│  │  3. Busca chunks mais relevantes (similaridade)             │    │
+│  │  4. Retorna documentos filtrados por relevância             │    │
+│  └─────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      GERAÇÃO DE ATIVIDADES                         │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  1. Monta prompt dinâmico com regras relevantes           │   │
-│  │  2. Inclui base de conhecimento recuperada                │   │
-│  │  3. Chama LLM (llama3.2:1b) para gerar atividade         │   │
-│  └─────────────────────────────────────────────────────────────┘   │
+│                      GERAÇÃO DE ATIVIDADES                          │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  1. Monta prompt dinâmico com regras relevantes             │    │
+│  │  2. Inclui base de conhecimento recuperada                  │    │
+│  │  3. Chama LLM (llama3.2:1b) para gerar atividade            │    │
+│  └─────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -442,10 +442,6 @@ curl https://assistia-api-tcc.fly.dev/health
 ## 👨‍🎓 Autores
 
 - **Laura** - *Desenvolvimento e Pesquisa* - [GitHub](https://github.com/LauraUrba)
-
----
-
-## 📄 Licença
 
 Este projeto foi desenvolvido para fins acadêmicos como Trabalho de Conclusão de Curso (TCC).
 
