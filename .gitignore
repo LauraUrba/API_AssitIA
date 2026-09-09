@@ -47,4 +47,29 @@ Thumbs.db
 models/*.gguf
 models/*.bin
 dados/pdfs/
-#foi tirado o EP27 por conta da memória
+
+# Arquivos grandes e dados
+*.pdf
+*.csv
+*.xlsx
+*.jsonl
+*.onnx
+*.h5
+*.pb
+*.pickle
+*.joblib
+
+# Modelos e dados específicos
+models/
+data/
+dados/
+documentos/
+conhecimento/
+
+# Ollama
+ollama/
+.ollama/
+
+# Docker
+docker-data/
+*.tar
