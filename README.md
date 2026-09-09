@@ -1,4 +1,3 @@
-```markdown
 # 🎓 AssistIA - API de Tecnologias Assistivas para TEA (com RAG)
 
 Sistema especializado em recomendar tecnologias assistivas práticas e de baixa tecnologia para alunos com Transtorno do Espectro Autista (TEA). O projeto utiliza **Arquitetura RAG (Retrieval-Augmented Generation)** com IA local, desenvolvido como Trabalho de Conclusão de Curso (TCC).
@@ -453,4 +452,3 @@ Este projeto foi desenvolvido para fins acadêmicos como Trabalho de Conclusão 
 ---
 
 **Desenvolvido para o Trabalho de Conclusão de Curso (TCC)** 🎓
-```
