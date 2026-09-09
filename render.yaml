@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: assistia-api
+    runtime: image
+    repo: https://github.com/seu-usuario/assistia-api
+    plan: free
+    region: oregon
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PORT
+        value: 8000
+
+    buildCommand: |
+      docker build -t assistia-api .
+
+    startCommand: |
+      docker run -p 8000:8000 assistia-api
+
+    healthCheckPath: /saude/
+
+    # LIMITES DE RECURSOS
+    scaling:
+      minInstances: 0
+      maxInstances: 1
+
+    # EMPO DE INATIVIDADE
+    autoDeploy: true
