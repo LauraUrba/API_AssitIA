@@ -31,4 +31,3 @@ kill_signal = "SIGINT"
 [[mounts]]
   source = "ollama_data"
   destination = "/root/.ollama"
-

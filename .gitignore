@@ -73,3 +73,6 @@ ollama/
 # Docker
 docker-data/
 *.tar
+
+fly.toml
+render.yaml

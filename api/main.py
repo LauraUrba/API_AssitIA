@@ -160,13 +160,12 @@ def gerar_atividades(request: AlunoRequest) -> RespostaAPI:
         pequenos rodando em CPU.'''
         modelo = get_model()
         atividades_geradas = []
-        atividades_anteriores = []  # NOVO: armazena atividades já geradas para evitar repetição
+        atividades_anteriores = []
         tamanho_prompt_total = 0
 
         for i, area in enumerate(areas_normalizadas):
             interesse_desta_atividade = escolher_interesse_para_area(request.interesses, i)
 
-            # NOVO: passar índices e atividades anteriores para o prompt
             prompt_area = montar_prompt_atividade_unica(
                 descricao_aluno=request.descricao_aluno,
                 nivel_dsm5=request.nivel_dsm5,
@@ -180,9 +179,9 @@ def gerar_atividades(request: AlunoRequest) -> RespostaAPI:
                 sensibilidades_observacao=request.sensibilidades_observacao,
                 recursos_list=request.recursos,
                 recursos_observacao=request.recursos_observacao,
-                indice_atividade=i,  # NOVO
-                total_atividades=len(areas_normalizadas),  # NOVO
-                atividades_anteriores=atividades_anteriores  # NOVO
+                indice_atividade=i,
+                total_atividades=len(areas_normalizadas),
+                atividades_anteriores=atividades_anteriores
             )
             tamanho_prompt_total += len(prompt_area)
 

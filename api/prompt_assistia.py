@@ -494,7 +494,7 @@ def montar_prompt_atividade_unica(
             restricoes.append(SENSIBILIDADES_RESTRICOES[s])
     restricoes_texto = "; ".join(restricoes) if restricoes else "Nenhuma"
 
-    recursos_texto = ", ".join([r.upper() for r in recursos_list]) if recursos_list else "Nenhum recurso especifico"
+    recursos_texto = montar_secao_recursos(recursos_list, recursos_observacao)
 
     # --- IDENTIFICAR MATERIAIS JA USADOS ---
     materiais_usados = []
@@ -589,6 +589,15 @@ AREA: {area.upper()}
 INTERESSE: {interesse.upper() if interesse else "Nenhum"}
 PERGUNTA: {pergunta}
 
+BASE DE CONHECIMENTO (use como referência quando fizer sentido):
+{base_conhecimento}
+
+RECURSOS DISPONÍVEIS NA ESCOLA:
+{recursos_texto}
+
+SENSIBILIDADES A RESPEITAR:
+{restricoes_texto}
+
 REGRA 1 - MATERIAIS DIFERENTES:
 {aviso_materiais if aviso_materiais else "Use materiais relacionados ao interesse do aluno."}
 
@@ -598,17 +607,18 @@ NAO use: explorar, interagir, discutir, observar (sem acao).
 
 REGRA 3 - {regra_prancha if regra_prancha else "Nenhuma regra adicional de comunicacao."}
 REGRA 4 - {regra_social if regra_social else "Nenhuma regra social especifica."}
-REGRA 5 - {dica_area}
+REGRA 5 - RECURSOS: Sempre que fizer sentido para a AREA, INCORPORE pelo menos UM dos recursos disponíveis acima no COMO FAZER e nos MATERIAIS. O interesse do aluno é o TEMA; os recursos são as FERRAMENTAS. Os dois devem aparecer juntos quando possível.
+REGRA 6 - {dica_area}
 
 FORMATO EXATO (sem markdown, sem negrito):
 
 NOME DA ATIVIDADE: [nome unico]
 OBJETIVO: [descricao especifica]
-MATERIAIS: {materiais_str}
+MATERIAIS: [interesse + recursos, separados por virgula]
 COMO FAZER:
-  1. [PROFESSOR] [acao concreta]
-  2. [ALUNO] [acao concreta]
-  3. [JUNTOS] [acao concreta]
+ 1. [PROFESSOR] [acao concreta]
+ 2. [ALUNO] [acao concreta]
+ 3. [JUNTOS] [acao concreta]
 QUEM FAZ: [PROFESSOR] / [ALUNO] / [JUNTOS]
 COMO APLICAR: {frequencia}, {contexto}
 
@@ -618,32 +628,12 @@ CRIE A ATIVIDADE:"""
 
 # 8. EXEMPLO DE USO (para você testar isoladamente antes de integrar no main.py)
 
-if __name__ == "__main__":
-    exemplo = montar_prompt(
-        descricao_aluno=(
-            "Idade: 4 anos\n"
-            "Comunicação: não verbal\n"
-            "Interação social: não interage\n"
-            "Dificuldades: isolamento\n"
-            "Potencialidades: criatividade\n"
-            "Observações: gosta de rotina"
-        ),
-        nivel_dsm5="2",
-        pergunta="Como posso ajudar esse aluno com o seu isolamento, comunicação e a parte de manter a rotina?",
-        base_conhecimento="Nenhum documento específico encontrado. Use conhecimento geral sobre TEA.",
-        areas_list=["comunicacao", "social", "estrutura"],
-        area_principal="interacao_social",
-        prioridade="alta",
-        interesses_list=["massinha"],
-        sensibilidades_list=["sons_altos"],
-        recursos_list=["reciclaveis"],
-    )
-    print("=== PROMPT ÚNICO (multi-atividade, versão antiga) ===")
-    print(f"[tamanho: {len(exemplo)} caracteres]\n")
 
-    print("\n=== PROMPTS POR ÁREA (versão nova, uma chamada por atividade) ===\n")
+if __name__ == "__main__":
+    print("=== PROMPTS POR ÁREA (uma chamada por atividade) ===\n")
     areas_teste = ["comunicacao", "social", "estrutura"]
     atividades_anteriores = []
+
     for i, area in enumerate(areas_teste):
         interesse = escolher_interesse_para_area(["massinha"], i)
         p = montar_prompt_atividade_unica(
@@ -662,6 +652,6 @@ if __name__ == "__main__":
             atividades_anteriores=atividades_anteriores
         )
         print(f"--- Prompt para área '{area}' ({len(p)} caracteres) ---")
-        print(p[:500] + "...\n")
-        # Simular que a atividade foi gerada para o próximo loop
+        print(p[:10000] + "...\n")
+
         atividades_anteriores.append(f"NOME DA ATIVIDADE: Exemplo {area.upper()}")
